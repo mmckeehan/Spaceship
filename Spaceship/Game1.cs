@@ -1,4 +1,5 @@
-﻿using Microsoft.Xna.Framework;
+﻿using System;
+using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 
@@ -9,6 +10,16 @@ namespace Spaceship
         private GraphicsDeviceManager _graphics;
         private SpriteBatch _spriteBatch;
 
+        // Assets
+        Texture2D shipSprite;
+        Texture2D asteroidSprite;
+        Texture2D spaceSprite;
+        SpriteFont gameFont;
+        SpriteFont timerFont;
+
+        Ship player = new Ship();
+        Controller gameController = new Controller();
+
         public Game1()
         {
             _graphics = new GraphicsDeviceManager(this);
@@ -18,7 +29,9 @@ namespace Spaceship
 
         protected override void Initialize()
         {
-            // TODO: Add your initialization logic here
+            _graphics.PreferredBackBufferWidth = 1280;
+            _graphics.PreferredBackBufferHeight = 720;
+            _graphics.ApplyChanges();
 
             base.Initialize();
         }
@@ -27,7 +40,14 @@ namespace Spaceship
         {
             _spriteBatch = new SpriteBatch(GraphicsDevice);
 
-            // TODO: use this.Content to load your game content here
+            // Sprites
+            shipSprite = Content.Load<Texture2D>("ship");
+            asteroidSprite = Content.Load<Texture2D>("asteroid");
+            spaceSprite = Content.Load<Texture2D>("space");
+
+            // Fonts
+            gameFont = Content.Load<SpriteFont>("spaceFont");
+            timerFont = Content.Load<SpriteFont>("timerFont");
         }
 
         protected override void Update(GameTime gameTime)
@@ -35,7 +55,26 @@ namespace Spaceship
             if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed || Keyboard.GetState().IsKeyDown(Keys.Escape))
                 Exit();
 
-            // TODO: Add your update logic here
+            if (gameController.inGame)
+            {
+                player.shipUpdate(gameTime);
+
+            }
+
+            gameController.conUpdate(gameTime);
+
+            for (int i = 0; i < gameController.asteroids.Count; i++)
+            {
+                gameController.asteroids[i].astroidUpdate(gameTime);
+
+                int sum = gameController.asteroids[i].radius + player.radius;
+                if (Vector2.Distance(gameController.asteroids[i].position, player.position) < sum)
+                {
+                    gameController.inGame = false;
+                    player.position = Ship.defaultPosition;
+                    gameController.asteroids.Clear();
+                }
+            }
 
             base.Update(gameTime);
         }
@@ -43,9 +82,28 @@ namespace Spaceship
         protected override void Draw(GameTime gameTime)
         {
             GraphicsDevice.Clear(Color.CornflowerBlue);
+            _spriteBatch.Begin();
+            _spriteBatch.Draw(spaceSprite, new Vector2(0,0), Color.White);
+            _spriteBatch.Draw(shipSprite, new Vector2 (player.position.X - 34, player.position.Y - 50), Color.White);
+            
+            // Main Menue
+            if (gameController.inGame == false)
+            {
+                string menueMessage = "Press Enter to Begin!";
+                Vector2 sizeOfText = gameFont.MeasureString(menueMessage);
+                int halfWidth = _graphics.PreferredBackBufferWidth / 2;
+                _spriteBatch.DrawString(gameFont, menueMessage, new Vector2(halfWidth - sizeOfText.X/2, 200), Color.White);
+            }
 
-            // TODO: Add your drawing code here
+            // Draw Asteroids
+            for (int i = 0; i < gameController.asteroids.Count; i++)
+            {
+                _spriteBatch.Draw(asteroidSprite, new Vector2(gameController.asteroids[i].position.X - gameController.asteroids[i].radius, gameController.asteroids[i].position.Y - gameController.asteroids[i].radius), Color.White);
+            }
+            
+            _spriteBatch.DrawString(timerFont, "Time: " + Math.Floor(gameController.totalTime).ToString(), new Vector2(3, 3), Color.White);
 
+            _spriteBatch.End();
             base.Draw(gameTime);
         }
     }
